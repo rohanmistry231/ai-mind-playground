@@ -1,36 +1,168 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧠 AI Mind Playground
 
-## Getting Started
+### **Analyze how you use AI — Are you growing your brain, or outsourcing your thinking?**
 
-First, run the development server:
+AI Mind Playground is a smart analytics tool that evaluates your prompts and interactions with Large Language Models (ChatGPT, Gemini, Claude, etc.) to determine whether they **expand your understanding** or **increase dependency**.
+
+This project offers two powerful modes:
+
+- **Playground Mode** — Analyze single prompts in real-time and receive AI-powered insight.
+- **Session Analyzer** — Paste your entire chat history and get a full report on learning vs dependency.
+
+---
+
+## 🚀 Live Demo  
+🔗 https://ai-mind-playground.vercel.app/
+
+---
+
+## 🎯 Why This Project Exists
+
+AI tools are changing how humans think, write, learn, and solve problems.
+
+But here's the real question:
+
+> **Are we becoming smarter with AI, or more dependent on it?**
+
+This project tracks your AI usage pattern and returns metrics such as:
+- **Brain Growth Score**
+- **Dependency Score**
+- **Detected Prompt Type**
+- **Insight Suggestion**
+- **Session Breakdown & Averages**
+
+---
+
+## 🧩 Core Features
+
+| Feature | Description |
+|--------|------------|
+| 🔎 Prompt Intelligence | Classifies your prompt (Learning, Delegation, Creation, Trivial). |
+| 📊 Brain Growth Analytics | Shows how much your prompt leads to actual skill development. |
+| 🔁 Dependency Score | Detects if you're outsourcing thinking & task completion. |
+| 🧠 Gemini AI Integration | Uses `gemini-2.5-flash` for intelligent reporting. |
+| 🧮 Local Fallback AI | Works even if API fails using rule-based heuristic scoring. |
+| 📈 Session Summary | Paste chat history & evaluate overall learning vs dependency. |
+| 📋 Prompt History Log | Tracks past prompts during your session. |
+| 📉 Charts | Recharts-based visual session insights. |
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|------|-----------|
+| Frontend | **Next.js 14**, React, Tailwind CSS |
+| Backend API | Next.js Route Handlers |
+| AI Model | **Google Gemini (`gemini-2.5-flash`)** |
+| Charts | Recharts |
+| Deployment | **Vercel** |
+| Environment | `.env.local` |
+
+---
+
+## ⚙ Environment Setup
+
+Create `.env.local`:
+
+```
+
+GEMINI_API_KEY=your_google_gemini_api_key_here
+
+````
+
+Install packages:
+
+```bash
+npm install
+````
+
+Run locally:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Build:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📂 Folder Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+ai-mind-playground/
+│── app/
+│   ├── page.tsx           # Playground analyzer UI
+│   ├── session-analyzer/  # Session level analyzer
+│   │   └── page.tsx
+│   └── api/
+│       └── analyze/
+│           └── route.ts   # Gemini AI prompt scoring
+│
+│── public/
+│
+│── package.json
+│── README.md
+│── .env.local (ignored)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Deployment Guide (Quick)
 
-## Deploy on Vercel
+This project is optimized for **Vercel**.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push to GitHub
+2. Import to Vercel
+3. Add `GEMINI_API_KEY` in Vercel > Project Settings > Environment Variables
+4. Deploy 🎉
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🌟 Use Cases
+
+✔ AI learning pattern detection
+✔ Productivity vs dependency analysis
+✔ Research on AI-human cognition
+✔ Educational tools
+✔ AI safety / ethical studies
+✔ Student learning dashboards
+
+---
+
+## 📢 Future Enhancements (Open to contributors)
+
+* 🧮 Exportable PDF Report
+* 📅 Multi-session tracking history (local + cloud)
+* 🤖 AI coach suggesting better prompts
+* 🔥 Leaderboard mode (Gamified brain growth)
+* 🔐 Auth + personal dashboard
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome!
+If you find bugs, open an issue with details.
+
+---
+
+## ⭐ Support the Project
+
+If this project inspired you, drop a ⭐ on GitHub!
+Your star helps this project grow and reach more developers.
+
+```
+⭐ Go to top → Click “Star”
+```
+
+---
+
+## Made with ❤️ and 🔥
+
+By **AI + Human Mind Collaboration**
