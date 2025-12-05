@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type SessionPrompt = {
@@ -11,6 +11,9 @@ type SessionPrompt = {
   dependency: number;
 };
 
+const SESSION_DAILY_LIMIT = 5;
+const SESSION_USAGE_KEY = "ai-mind-playground-session-usage";
+
 export default function SessionAnalyzerPage() {
   const [rawText, setRawText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -20,12 +23,102 @@ export default function SessionAnalyzerPage() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [remainingToday, setRemainingToday] = useState<number | null>(null);
+
+  // ----- daily limit helpers -----
+
+  const initDailyUsage = () => {
+    if (typeof window === "undefined") return;
+
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const raw = localStorage.getItem(SESSION_USAGE_KEY);
+
+    if (!raw) {
+      localStorage.setItem(
+        SESSION_USAGE_KEY,
+        JSON.stringify({ date: today, count: 0 })
+      );
+      setRemainingToday(SESSION_DAILY_LIMIT);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { date: string; count: number };
+
+      if (parsed.date === today) {
+        const remaining = Math.max(
+          SESSION_DAILY_LIMIT - (parsed.count || 0),
+          0
+        );
+        setRemainingToday(remaining);
+      } else {
+        // New day -> reset
+        localStorage.setItem(
+          SESSION_USAGE_KEY,
+          JSON.stringify({ date: today, count: 0 })
+        );
+        setRemainingToday(SESSION_DAILY_LIMIT);
+      }
+    } catch {
+      // corrupted -> reset
+      localStorage.setItem(
+        SESSION_USAGE_KEY,
+        JSON.stringify({ date: today, count: 0 })
+      );
+      setRemainingToday(SESSION_DAILY_LIMIT);
+    }
+  };
+
+  const incrementUsage = () => {
+    if (typeof window === "undefined") return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    let date = today;
+    let count = 0;
+
+    const raw = localStorage.getItem(SESSION_USAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { date: string; count: number };
+        date = parsed.date;
+        count = parsed.count || 0;
+      } catch {
+        // ignore, will reset below
+      }
+    }
+
+    if (date !== today) {
+      date = today;
+      count = 0;
+    }
+
+    count += 1;
+
+    localStorage.setItem(
+      SESSION_USAGE_KEY,
+      JSON.stringify({ date, count })
+    );
+
+    const remaining = Math.max(SESSION_DAILY_LIMIT - count, 0);
+    setRemainingToday(remaining);
+  };
+
+  useEffect(() => {
+    initDailyUsage();
+  }, []);
 
   const handleAnalyzeSession = () => {
     const text = rawText.trim();
 
     if (!text) {
       alert("Paste some conversation or prompts first.");
+      return;
+    }
+
+    if (remainingToday !== null && remainingToday <= 0) {
+      alert(
+        `Daily limit reached. You can analyze ${SESSION_DAILY_LIMIT} sessions per day. Please come back tomorrow.`
+      );
       return;
     }
 
@@ -146,6 +239,9 @@ export default function SessionAnalyzerPage() {
 
       setOverallGrowth(Math.round(totalGrowth / analyzed.length));
       setOverallDependency(Math.round(totalDependency / analyzed.length));
+
+      // count one session analysis
+      incrementUsage();
     } catch (err) {
       console.error(err);
       setError("Something went wrong while analyzing the session.");
@@ -166,6 +262,9 @@ export default function SessionAnalyzerPage() {
     {} as Record<string, number>
   );
 
+  const isLimitReached =
+    remainingToday !== null && remainingToday <= 0;
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
       <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
@@ -180,16 +279,24 @@ export default function SessionAnalyzerPage() {
               session-level growth vs dependency report.
             </p>
           </div>
-          <nav className="flex gap-2 text-xs md:text-sm">
-            <Link
-              href="/"
-              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500"
-            >
-              Playground
-            </Link>
-            <span className="px-3 py-1.5 rounded-full bg-slate-800 border border-slate-600 text-slate-100">
-              Session Analyzer
-            </span>
+          <nav className="flex flex-col items-end gap-1 text-xs md:text-sm">
+            <div className="flex gap-2">
+              <Link
+                href="/"
+                className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500"
+              >
+                Playground
+              </Link>
+              <span className="px-3 py-1.5 rounded-full bg-slate-800 border border-slate-600 text-slate-100">
+                Session Analyzer
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Daily limit: {SESSION_DAILY_LIMIT} analyses •{" "}
+              {remainingToday !== null
+                ? `${Math.max(remainingToday, 0)} remaining today`
+                : "Loading..."}
+            </p>
           </nav>
         </div>
 
@@ -206,10 +313,14 @@ export default function SessionAnalyzerPage() {
           />
           <button
             onClick={handleAnalyzeSession}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || isLimitReached}
             className="inline-flex items-center justify-center rounded-xl bg-indigo-500 hover:bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isAnalyzing ? "Analyzing Session..." : "Analyze Session"}
+            {isLimitReached
+              ? "Daily Limit Reached"
+              : isAnalyzing
+              ? "Analyzing Session..."
+              : "Analyze Session"}
           </button>
           {error && (
             <p className="text-sm text-red-400 mt-1">{error}</p>

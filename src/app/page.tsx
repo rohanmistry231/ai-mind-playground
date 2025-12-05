@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ResponsiveContainer,
@@ -21,6 +21,9 @@ type PromptRecord = {
   createdAt: string;
 };
 
+const DAILY_LIMIT = 5;
+const USAGE_KEY = "ai-mind-playground-usage";
+
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,12 +32,99 @@ export default function Home() {
   const [dependencyScore, setDependencyScore] = useState<number | null>(null);
   const [promptType, setPromptType] = useState<string | null>(null);
   const [history, setHistory] = useState<PromptRecord[]>([]);
+  const [remainingToday, setRemainingToday] = useState<number | null>(null);
+
+  // ----- daily limit helpers -----
+
+  const initDailyUsage = () => {
+    if (typeof window === "undefined") return;
+
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const raw = localStorage.getItem(USAGE_KEY);
+
+    if (!raw) {
+      localStorage.setItem(
+        USAGE_KEY,
+        JSON.stringify({ date: today, count: 0 })
+      );
+      setRemainingToday(DAILY_LIMIT);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { date: string; count: number };
+
+      if (parsed.date === today) {
+        const remaining = Math.max(DAILY_LIMIT - (parsed.count || 0), 0);
+        setRemainingToday(remaining);
+      } else {
+        // New day -> reset
+        localStorage.setItem(
+          USAGE_KEY,
+          JSON.stringify({ date: today, count: 0 })
+        );
+        setRemainingToday(DAILY_LIMIT);
+      }
+    } catch {
+      // corrupted -> reset
+      localStorage.setItem(
+        USAGE_KEY,
+        JSON.stringify({ date: today, count: 0 })
+      );
+      setRemainingToday(DAILY_LIMIT);
+    }
+  };
+
+  const incrementUsage = () => {
+    if (typeof window === "undefined") return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    let date = today;
+    let count = 0;
+
+    const raw = localStorage.getItem(USAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { date: string; count: number };
+        date = parsed.date;
+        count = parsed.count || 0;
+      } catch {
+        // ignore and reset below
+      }
+    }
+
+    if (date !== today) {
+      date = today;
+      count = 0;
+    }
+
+    count += 1;
+
+    localStorage.setItem(
+      USAGE_KEY,
+      JSON.stringify({ date, count })
+    );
+
+    const remaining = Math.max(DAILY_LIMIT - count, 0);
+    setRemainingToday(remaining);
+  };
+
+  useEffect(() => {
+    initDailyUsage();
+  }, []);
 
   const handleAnalyze = async () => {
     const text = prompt.toLowerCase().trim();
 
     if (!text) {
       alert("Please enter a prompt first.");
+      return;
+    }
+
+    if (remainingToday !== null && remainingToday <= 0) {
+      alert(
+        `Daily limit reached. You can analyze ${DAILY_LIMIT} prompts per day. Please come back tomorrow.`
+      );
       return;
     }
 
@@ -81,6 +171,9 @@ export default function Home() {
           ...prev,
         ]);
       }
+
+      // only increment usage when we actually ran an analysis
+      incrementUsage();
     } catch (err) {
       console.error("Error analyzing with Gemini, using fallback:", err);
 
@@ -179,6 +272,9 @@ export default function Home() {
         },
         ...prev,
       ]);
+
+      // fallback also counts as one "analysis" for quota
+      incrementUsage();
     } finally {
       setIsLoading(false);
     }
@@ -206,6 +302,9 @@ export default function Home() {
     { name: "Avg Dependency", value: avgDependency },
   ];
 
+  const isLimitReached =
+    remainingToday !== null && remainingToday <= 0;
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
       <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
@@ -220,16 +319,24 @@ export default function Home() {
               whether it grows your mind or makes you more dependent.
             </p>
           </div>
-          <nav className="flex gap-2 text-xs md:text-sm">
-            <span className="px-3 py-1.5 rounded-full bg-slate-800 border border-slate-600 text-slate-100">
-              Playground
-            </span>
-            <Link
-              href="/session-analyzer"
-              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500"
-            >
-              Session Analyzer
-            </Link>
+          <nav className="flex flex-col items-end gap-1 text-xs md:text-sm">
+            <div className="flex gap-2">
+              <span className="px-3 py-1.5 rounded-full bg-slate-800 border border-slate-600 text-slate-100">
+                Playground
+              </span>
+              <Link
+                href="/session-analyzer"
+                className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500"
+              >
+                Session Analyzer
+              </Link>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Daily limit: {DAILY_LIMIT} prompts •{" "}
+              {remainingToday !== null
+                ? `${Math.max(remainingToday, 0)} remaining today`
+                : "Loading..."}
+            </p>
           </nav>
         </div>
 
@@ -246,10 +353,14 @@ export default function Home() {
           />
           <button
             onClick={handleAnalyze}
-            disabled={isLoading}
+            disabled={isLoading || isLimitReached}
             className="inline-flex items-center justify-center rounded-xl bg-indigo-500 hover:bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Analyzing..." : "Analyze Prompt"}
+            {isLimitReached
+              ? "Daily Limit Reached"
+              : isLoading
+              ? "Analyzing..."
+              : "Analyze Prompt"}
           </button>
         </section>
 
